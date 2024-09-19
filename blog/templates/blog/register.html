@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            max-width: 300px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        a{
+            margin-top: 30px;
+            margin-left: 120px;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button {
+            width: 300px;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .success {
+            color: green;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Register</h2>
+
+    <form id="registration-form" method="POST">
+        {% csrf_token %}
+        <div>
+            <label for="id_username">Username:</label>
+            <input type="text" id="id_username" name="username" required>
+        </div>
+        <div>
+            <label for="id_password1">Password:</label>
+            <input type="password" id="id_password1" name="password1" required>
+        </div>
+        <div>
+            <label for="id_password2">Confirm Password:</label>
+            <input type="password" id="id_password2" name="password2" required>
+        </div>
+
+        <button type="submit">Register</button>
+        <a href="{% url 'login_view' %}">Login</a>
+    </form>
+
+    <div id="response-message" class="error" style="display:none;"></div>
+</div>
+
+<script>
+    document.getElementById('registration-form').addEventListener('submit', function(event) {
+        event.preventDefault();
+
+        const form = new FormData(this);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch("{% url 'register' %}", {
+            method: "POST",
+            body: form,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                const messageDiv = document.getElementById('response-message');
+                if (data.message) {
+                    messageDiv.textContent = data.message;
+                    messageDiv.className = 'success';
+                    messageDiv.style.display = 'block';
+                    document.getElementById('registration-form').reset();
+                } else if (data.error) {
+                    messageDiv.textContent = 'Error: ' + Object.values(data.error).join(', ');
+                    messageDiv.className = 'error';
+                    messageDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    });
+</script>
+
+</body>
+</html>

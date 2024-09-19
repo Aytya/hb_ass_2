@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Login</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .form-container {
+            background-color: #fff;
+            padding: 40px;
+            border-radius: 5px;
+            max-width: 300px;
+            margin: auto;
+        }
+        h2 {
+            text-align: center;
+        }
+        label {
+            display: block;
+            margin: 10px 0 5px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .error {
+            color: red;
+            margin-bottom: 10px;
+        }
+        .success {
+            color: green;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="form-container">
+    <h2>Login</h2>
+
+    <form id="login-form" method="POST">
+        {% csrf_token %}
+        <div>
+            <label for="id_username">Username:</label>
+            <input type="text" id="id_username" name="username" required>
+        </div>
+        <div>
+            <label for="id_password">Password:</label>
+            <input type="password" id="id_password" name="password" required>
+        </div>
+
+        <button type="submit">Login</button>
+    </form>
+
+    <div id="response-message" class="error" style="display:none;"></div>
+</div>
+
+<script>
+    document.getElementById('login-form').addEventListener('submit', function(event) {
+        event.preventDefault(); // Prevent the form from submitting the default way
+
+        const form = new FormData(this);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch("{% url 'login_view' %}", {  // Change 'login_view' to the correct URL name if needed
+            method: "POST",
+            body: form,
+            headers: {
+                'X-CSRFToken': csrfToken
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                const messageDiv = document.getElementById('response-message');
+                if (data.message) {
+                    messageDiv.textContent = data.message;
+                    messageDiv.className = 'success';
+                    messageDiv.style.display = 'block';
+                    // Redirect to a different page upon successful login
+                    window.location.href = "{% url 'post_list' %}";  // Change 'post_list' to your post-login URL
+                } else if (data.error) {
+                    messageDiv.textContent = 'Error: ' + data.error;
+                    messageDiv.className = 'error';
+                    messageDiv.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    });
+</script>
+
+</body>
+</html>

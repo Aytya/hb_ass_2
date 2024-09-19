@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog Posts</title>
+</head>
+<body>
+
+<div class="header">
+    <div class="user-info">
+        {% if user.is_authenticated %}
+        Logged in as {{ user.username }}
+        {% else %}
+        Not logged in
+        {% endif %}
+    </div>
+
+    <div class="add-post">
+        <a class="add-post-button" href="{% url 'post_add' %}">Add New Blog</a>
+    </div>
+</div>
+
+<h1>Blog Posts</h1>
+
+{% for post in posts %}
+<div>
+    <h2><a href="{% url 'post_detail' post.pk %}">{{ post.title }}</a></h2>
+    <p>by {{ post.author }} | {{ post.created_at }}</p>
+    <p>{{ post.content|truncatewords:30 }}</p>
+    <a href="{% url 'post_edit' post.pk %}">Edit</a> |
+    <a href="{% url 'post_delete' post.pk %}">Delete</a>
+</div>
+{% endfor %}
+
+<div>
+    {% if page_obj.has_previous %}
+    <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+    {% endif %}
+
+    <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+    <a href="?page={{ page_obj.next_page_number }}">Next</a>
+    {% endif %}
+</div>
+</body>
+</html>
