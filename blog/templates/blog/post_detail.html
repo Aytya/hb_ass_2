@@ -1,3 +1,4 @@
+{% load cache %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,14 +11,19 @@
 <p>by {{ post.author }} | {{ post.created_at }}</p>
 <p>{{ post.content }}</p>
 
-<h2>Comments</h2>
+<h3>Number of Comments: {{ comment_count }}</h3>
+
+{% cache 30 post.pk "recent_comments" %}
+<h3>Recent Comments</h3>
 <ul>
-    {% for comment in post.comments.all %}
-    <li>{{ comment.author }}: {{ comment.text }} ({{ comment.created_at }})</li>
-    {% empty %}
-    <li>No comments yet.</li>
+    {% for comment in recent_comments %}
+    <li>
+        <strong>{{ comment.author.username }}</strong>: {{ comment.text }} <br>
+        <small>Posted on: {{ comment.created_at }}</small>
+    </li>
     {% endfor %}
 </ul>
+{% endcache %}
 
 <h3>Add a Comment</h3>
 <form method="POST">

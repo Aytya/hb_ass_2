@@ -3,27 +3,45 @@ from django.contrib.auth.views import LoginView
 from django.core.paginator import Paginator
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import UserCreationForm
-from django.http import HttpResponse, JsonResponse, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
-from django.views.decorators.csrf import csrf_exempt, csrf_protect
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import cache_page
+from django.core.cache import cache
 
 from .forms import PostForm, CommentForm
-from .models import Post
+from .models import Post, User, RoundRobinMiddleware
+from django.contrib.auth import get_user_model
+User = get_user_model()
+
+load_balancer = RoundRobinMiddleware()
 
 # Create your views here.
 def index(request):
     #return HttpResponse('Hello, world. You\'re at the blogs index.')
     return render(request, 'blog/post.html')
 
+@cache_page(60)
 def post_list(request):
-    posts = Post.objects.all()
+    server = load_balancer.get_next_server()
+    print(f"Routing to server: {server}")
+
+    posts = Post.objects.select_related('author').prefetch_related('comments')
     paginator = Paginator(posts, 5)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     return render(request, 'blog/post_list.html', {'posts': page_obj, 'page_obj': page_obj})
 
+@cache_page(60)
 def post_detail(request, pk):
     post = get_object_or_404(Post, pk=pk)
+    comment_count = cache.get(f'post_{post.pk}_comment_count')
+
+    if comment_count is None:
+        comment_count = post.comments.count()
+        cache.set(f'post_{post.pk}_comment_count', comment_count, timeout=120)
+
+    recent_comments = post.comments.all().order_by('-created_at')[:5]
     if request.method == "POST":
         form = CommentForm(request.POST)
         if form.is_valid():
@@ -31,11 +49,15 @@ def post_detail(request, pk):
             comment.post = post
             comment.author = request.user
             comment.save()
+
+            cache.delete(f'post_{post.pk}_comment_count')
+
             return redirect('post_detail', pk=post.pk)
     else:
         form = CommentForm()
 
-    return render(request, 'blog/post_detail.html', {'post': post, 'comment_form': form})
+    return render(request, 'blog/post_detail.html', {'post': post, 'recent_comments': recent_comments, 'comment_form': form, 'comment_count': comment_count})
+
 
 @login_required
 def post_new(request):
@@ -43,7 +65,7 @@ def post_new(request):
         form = PostForm(request.POST)
         if form.is_valid():
             post = form.save(commit=False)
-            post.author = request.user
+            post.author = User.objects.get(pk=request.user.pk)
             post.save()
             return redirect('post_detail', pk=post.pk)
     else:
@@ -125,3 +147,7 @@ def login_view(request):
 
 class CustomLoginView(LoginView):
     template_name = 'blog/login.html'
+
+def health(request):
+    return JsonResponse({'status': 'OK'}, status=200)
+
